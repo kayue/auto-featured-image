@@ -7,9 +7,6 @@
  * Author URI: http://ka-yue.com
  */
 
-require_once('FirePHPCore/FirePHP.class.php');
-require_once('FirePHPCore/fb.php');
-
 add_action( 'save_post', array("AutoFeautredImagePlugin", "generate_thumbmail") );
 add_action( 'transition_post_status', array("AutoFeautredImagePlugin", "check_transition") ); // Plugin should work for scheduled posts as well
 add_action( 'admin_notices', array("AutoFeautredImagePlugin", "check_permission") );
