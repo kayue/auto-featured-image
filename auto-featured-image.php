@@ -88,7 +88,7 @@ class AutoFeautredImagePlugin {
     static function found_image_url($html)
     {
         $matches = array();
-        FB::send($html);
+        
         // images
         $pattern = '/<img[^>]*src=\"?(?<src>[^\"]*)\"?[^>]*>/im';
         preg_match( $pattern, $html, $matches ); 
