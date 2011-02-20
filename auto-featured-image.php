@@ -7,15 +7,23 @@
  * Author URI: http://ka-yue.com
  */
 
-add_action( 'save_post', array("AutoFeautredImagePlugin", "generate_thumbmail") );
-add_action( 'transition_post_status', array("AutoFeautredImagePlugin", "check_transition") ); // Plugin should work for scheduled posts as well
-add_action( 'admin_notices', array("AutoFeautredImagePlugin", "check_permission") );
-
-add_action( 'admin_menu', array("AutoFeautredImagePlugin", "add_admin_menu") ); // Add batch process capability
-add_action( 'wp_ajax_generatepostthumbnail', array("AutoFeautredImagePlugin", "ajax_process_post") ); // Hook to implement AJAX request
-
-class AutoFeautredImagePlugin {
+class Auto_Feautred_Image_Plugin {
     
+    public function __construct()
+    {
+        // run plugin every time people save post
+        add_action( 'save_post', array(__CLASS__, "generate_thumbmail") );
+        
+        // plugin should work for scheduled posts as well
+        add_action( 'transition_post_status', array(__CLASS__, "check_transition") ); 
+        
+        // 
+        add_action( 'admin_notices', array(__CLASS__, "check_permission") );
+        
+        add_action( 'admin_menu', array(__CLASS__, "add_admin_menu") ); // Add batch process capability
+        add_action( 'wp_ajax_generatepostthumbnail', array(__CLASS__, "ajax_process_post") ); // Hook to implement AJAX request
+    }
+        
     /**
      * Function to check whether scheduled post is being published. If so, afi_publish_post should be called.
      * 
@@ -238,7 +246,7 @@ class AutoFeautredImagePlugin {
     
     static function add_admin_menu() // Register the management page
     {
-        add_options_page('Auto Featured Image', 'Auto Featured Image', 'manage_options', 'generate-post-thumbnails', array( "AutoFeautredImagePlugin", "construct_admin_interface"));
+        add_options_page('Auto Featured Image', 'Auto Featured Image', 'manage_options', 'generate-post-thumbnails', array( "Auto_Feautred_Image_Plugin", "construct_admin_interface"));
     }
     
     
@@ -368,3 +376,5 @@ class AutoFeautredImagePlugin {
         die(-1);
     } //End ajax_process_post()
 }
+
+new Auto_Feautred_Image_Plugin();
