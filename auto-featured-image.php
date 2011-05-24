@@ -74,7 +74,7 @@ class Auto_Feautred_Image_Plugin {
         // case 2: need to search for an image from content
         // find image from content
         // check is there any image we can use
-        $image_url = self::found_image_url($post->post_content);
+        $image_url = self::extractThumbnail($post->post_content);
         
         // if no url found, do nothing
         if( $image_url == null ) return;
@@ -90,45 +90,53 @@ class Auto_Feautred_Image_Plugin {
         return;
     }
     
-    /**
-     * @return Integer if attachment id if attachment is used. 
-     * @return String if image url if external image is used.
-     * @return NULL if fail
+    /*
+     * Extract thumbnail from content. 
+     * @return String Thumbnail url
      */
-    static function found_image_url($html)
-    {
+    static function extractThumbnail($content) {
         $matches = array();
-        
-        // images
-        $pattern = '/<img[^>]*src=\"?(?<src>[^\"]*)\"?[^>]*>/im';
-        preg_match( $pattern, $html, $matches ); 
-        if($matches['src']) {
-            return $matches['src'];
+
+        // image tag
+        preg_match( '/<img [^>]*src=["\']?(?<src>(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\w-_=&\/?\.]*)*\/?)["\'][^>]*>/im', $content, $matches ); 
+        if(isset($matches['src'])) return $matches['src'];
+
+        // get thumbnail from oembed protocal
+        // you can add more oembed providers in here.
+        $providers = array();
+        $providers['/(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\w-_=&\/?\.]*)*\/?/i'] = 'http://api.embed.ly/1/oembed?format=json&maxwidth=500';
+
+        foreach($providers as $scheme => $endpoint) {
+            preg_match( $scheme, $content, $matches ); 
+            // if url found...
+            if(isset($matches[0])) :
+                $url = urlencode($matches[0]);
+                $query = "{$endpoint}&url={$url}";
+                $ch = curl_init($query);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_HEADER, 0);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+                
+                if($data = curl_exec($ch)){
+                    // curl success, get http code
+                    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+                    if( $http_code >= 200 && $http_code < 300 ){
+                        // success
+                        $result = json_decode(trim($data));
+                        if(isset($result->thumbnail_url)) return $result->thumbnail_url;
+                    } 
+
+                    // http error: $http_code
+                } else {
+                    // curl error: curl_errno($ch);
+                };
+                
+                curl_close($ch);
+            endif;
         }
-        
-        // youtube
-        $pattern = "/(http:\/\/www.youtube.com\/watch\?.*v=|http:\/\/www.youtube-nocookie.com\/.*v\/|http:\/\/www.youtube.com\/embed\/|http:\/\/www.youtube.com\/v\/)(?<id>[\w-_]+)/i";
-        preg_match( $pattern, $html, $matches ); 
-        if( $matches['id'] ) {
-            return "http://img.youtube.com/vi/{$matches['id']}/0.jpg";
-        }
-        
-        // vimeo
-        $pattern = "/(http:\/\/vimeo.com\/|http:\/\/player.vimeo.com\/video\/|http:\/\/vimeo.com\/moogaloop.swf?.*clip_id=)(?<id>[\d]+)/i";
-        preg_match( $pattern, $html, $matches ); 
-        if( $vimeo_id = $matches['id'] ) {
-            $hash = unserialize(file_get_contents("http://vimeo.com/api/v2/video/{$vimeo_id}.php"));
-            return "{$hash[0]['thumbnail_medium']}";
-        }
-        
-        // dailymotion
-        // http://www.dailymotion.com/thumbnail/150x150/video/xexakq
-        $pattern = "/(http:\/\/www.dailymotion.com\/swf\/video\/)(?<id>[\w\d]+)/i";
-        preg_match( $pattern, $html, $matches ); 
-        if( $matches['id'] ) {
-            return "http://www.dailymotion.com/thumbnail/150x150/video/{$matches['id']}.jpg";
-        }
-        
+
+        // return null if nothing found
         return null;
     }
     
