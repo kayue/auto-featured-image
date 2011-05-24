@@ -123,12 +123,12 @@ class Auto_Feautred_Image_Plugin {
 
         foreach($providers as $scheme => $endpoint) {
             preg_match( $scheme, $content, $matches ); 
-            var_dump($matches);
+            
             // if url found...
             if(isset($matches[0])) :
                 $url = urlencode($matches[0]);
                 $query = "{$endpoint}&url={$url}";
-                var_dump($query);
+                
                 $ch = curl_init($query);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_HEADER, 0);
