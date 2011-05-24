@@ -141,7 +141,6 @@ class Auto_Feautred_Image_Plugin {
                     if( $http_code >= 200 && $http_code < 300 ){
                         // success
                         $result = json_decode(trim($data));
-                        var_dump($result);
                         if(isset($result->thumbnail_url)) return $result->thumbnail_url;
                     } 
 
