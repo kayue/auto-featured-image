@@ -2,7 +2,7 @@
 /*
  * Plugin Name: Auto Featured Image
  * Description: Automatically generate featured image for new/old posts if Post Thumbnail is not set manually. In addition to post attachment, it also support external image, Youtube, Vimeo, DailyMotion. Originally designed by Aditya Mooley <adityamooley@sanisoft.com>.
- * Version: 1.2
+ * Version: 1.3
  * Author: Ka Yue Yeung <kayuey@gmail.com>
  * Author URI: http://ka-yue.com
  */
