@@ -77,7 +77,7 @@ class Auto_Feautred_Image_Plugin {
         $image_url = self::extractThumbnail($post->post_content);
         
         // if no url found, do nothing
-        if( $image_url == null ) return;
+        if( $image_url === null ) return;
         
         // try to create an image attchment from given image url, and use it as thumbnail
         $post_thumbnail_id = self::create_post_attachment_from_url($image_url);
@@ -94,24 +94,41 @@ class Auto_Feautred_Image_Plugin {
      * Extract thumbnail from content. 
      * @return String Thumbnail url
      */
-    static function extractThumbnail($content) {
+    function extractThumbnail($content) {
         $matches = array();
 
         // image tag
         preg_match( '/<img [^>]*src=["\']?(?<src>(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\w-_=&\/?\.]*)*\/?)["\'][^>]*>/im', $content, $matches ); 
         if(isset($matches['src'])) return $matches['src'];
 
-        // get thumbnail from oembed protocal
-        // you can add more oembed providers in here.
+        // embedded youtube
+        $pattern = "/http:\/\/(www.)?youtube.com\/embed\/(?<id>[\w-_]+)/i";
+        preg_match( $pattern, $content, $matches ); 
+        if( isset($matches['id']) ) {
+            $content = "http://www.youtube.com/watch?v={$matches['id']}";
+        }
+        
+        $pattern = "/http:\/\/player.vimeo.com\/video\/(?<id>[\w-_]+)/i";
+        preg_match( $pattern, $content, $matches ); 
+        if( isset($matches['id']) ) {
+            $content = "http://vimeo.com/{$matches['id']}";
+        }
+
+        // get thumbnail from oebmed protocal
         $providers = array();
+        // Embed.ly API
         $providers['/(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\w-_=&\/?\.]*)*\/?/i'] = 'http://api.embed.ly/1/oembed?format=json&maxwidth=500';
+        // $providers['/http:\/\/(www\.)?(youtube.com\/watch.|youtu.be\/.)[\w-_=&\/]+/i'] = 'http://www.youtube.com/oembed?format=json';
+        // $providers['/http:\/\/(www\.)?(vimeo.com\/)[\w-_=&\/]+/i'] = 'http://vimeo.com/api/oembed.json?';
 
         foreach($providers as $scheme => $endpoint) {
             preg_match( $scheme, $content, $matches ); 
+            var_dump($matches);
             // if url found...
             if(isset($matches[0])) :
                 $url = urlencode($matches[0]);
                 $query = "{$endpoint}&url={$url}";
+                var_dump($query);
                 $ch = curl_init($query);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -124,6 +141,7 @@ class Auto_Feautred_Image_Plugin {
                     if( $http_code >= 200 && $http_code < 300 ){
                         // success
                         $result = json_decode(trim($data));
+                        var_dump($result);
                         if(isset($result->thumbnail_url)) return $result->thumbnail_url;
                     } 
 
@@ -146,34 +164,36 @@ class Auto_Feautred_Image_Plugin {
      */
     static function create_post_attachment_from_url($imageUrl = null)
     {
-        if(is_null($imageUrl)) return null;
+        if($imageUrl === null) return null;
         
         // get file name
         $filename = substr($imageUrl, (strrpos($imageUrl, '/'))+1);
+
         if (!(($uploads = wp_upload_dir(current_time('mysql')) ) && false === $uploads['error'])) {
             return null;
         }
     
         // Generate unique file name
         $filename = wp_unique_filename( $uploads['path'], $filename );
+        $filename .= ".jpg";
     
         // move the file to the uploads dir
         $new_file = $uploads['path'] . "/$filename";
-        
+
         // download file
         if (!ini_get('allow_url_fopen')) {
             $file_data = self::curl_get_file_contents($imageUrl);
         } else {
             $file_data = @file_get_contents($imageUrl);
         }
-        
+
         // fail to download image.
         if (!$file_data) {
             return null;
         }
         
         file_put_contents($new_file, $file_data);
-        
+
         // Set correct file permissions
         $stat = stat( dirname( $new_file ));
         $perms = $stat['mode'] & 0000666;
@@ -183,7 +203,7 @@ class Auto_Feautred_Image_Plugin {
         $wp_filetype = wp_check_filetype( $filename, $mimes );
         
         extract( $wp_filetype );
-        
+
         // no file type! No point to proceed further
         if ( ( !$type || !$ext ) && !current_user_can( 'unfiltered_upload' ) ) {
             return null;
